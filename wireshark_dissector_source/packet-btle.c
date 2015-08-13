@@ -25,7 +25,7 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
- 
+
 #include <glib.h>
 #include <gmodule.h>
 
@@ -56,11 +56,11 @@ plugin_reg_handoff(void)
 #endif
 
 /* LL control opcodes */
-#define LL_CONNECTION_UPDATE_REQ 0x00 
-#define LL_CHANNEL_MAP_REQ 0x01 
+#define LL_CONNECTION_UPDATE_REQ 0x00
+#define LL_CHANNEL_MAP_REQ 0x01
 #define LL_TERMINATE_IND 0x02
 #define LL_ENC_REQ 0x03
-#define LL_ENC_RSP 0x04 
+#define LL_ENC_RSP 0x04
 #define LL_START_ENC_REQ 0x05
 #define LL_START_ENC_RSP 0x06
 #define LL_UNKNOWN_RSP 0x07
@@ -565,9 +565,9 @@ proto_tree* add_adv_data_attr(proto_tree* tree, tvbuff_t* tvb, const int hf, con
     guint8 type;
     attr_item = proto_tree_add_item(tree, hf, tvb, 2, length-1, enc);
     attr_tree = proto_item_add_subtree(attr_item, ett_adv_data_flags);
-    
+
     type = tvb_get_guint8(tvb, 1);
-    
+
     proto_tree_add_item(attr_tree, hf_btle_adv_data_attr_length, tvb, 0, 1, ENC_LITTLE_ENDIAN);
     if (hf == hf_btle_adv_data_unknown)
     {
@@ -578,7 +578,7 @@ proto_tree* add_adv_data_attr(proto_tree* tree, tvbuff_t* tvb, const int hf, con
         proto_tree_add_uint(attr_tree, hf_btle_adv_data_attr_type, tvb, 1, 1, type);
     }
     // proto_tree_add_item(attr_tree, hf_btle_adv_data_attrs[type], tvb, 2, length-1, enc);
-    
+
     return attr_tree;
 }
 
@@ -606,22 +606,25 @@ dissect_adv_data_attr(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo)
     wmem_allocator_t* epan_scope_mem_pool;
     guint8 address[6];
 
-    
+
     guint8 length, type;
-    
+
     length = tvb_get_guint8(tvb, 0);
+    if (!length) {
+        return;
+    }
     type = tvb_get_guint8(tvb, 1);
-    
+
     // if (type == 0 || type == 11 || type == 12 || type == 19 || (type > 26 && type != 255))
         // return;
 
     // attr_item          = proto_tree_add_item(tree, hf_btle_adv_data_attrs[type], tvb, 0, tvb_captured_length(tvb), ENC_NA);
     // attr_tree          = proto_item_add_subtree(attr_item, ett_adv_data_attr);
-    
+
     // attr_length_item = proto_tree_add_item(attr_tree, hf_btle_adv_data_attr_length, tvb, 0, 1, ENC_LITTLE_ENDIAN);
     // attr_type_item      = proto_tree_add_item(attr_tree, hf_btle_adv_data_attr_type, tvb, 1, 1, ENC_LITTLE_ENDIAN);
-     
-    
+
+
     switch(type){
         case index_hf_btle_adv_data_flags:
             // attr_item = proto_tree_add_item(tree, hf_btle_adv_data_attrs[type], tvb, 2, length-1, ENC_LITTLE_ENDIAN);
@@ -650,7 +653,7 @@ dissect_adv_data_attr(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo)
                 tvb_memcpy(tvb, &uuids[i], i, 16);
                 reverse_byte_order_inplace(&uuids[i], 16);
                 proto_tree_add_bytes(attr_tree, hf_btle_128b_uuid, tvb, i, 16, &uuids[i]);
-            } 
+            }
             break;
         case index_hf_btle_adv_data_com_32b_uuids:
         case index_hf_btle_adv_data_inc_32b_uuids:
@@ -776,16 +779,19 @@ void
 dissect_adv_data(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo)
 {
     guint i;
+    guint max_len = tvb_captured_length(tvb);
     // proto_item* adv_data_item;
     // proto_tree* adv_data_tree;
-    for (i = 0; i < tvb_captured_length(tvb); i += tvb_get_guint8(tvb, i) + 1)
+    for (i = 0; i < max_len; i += tvb_get_guint8(tvb, i) + 1)
     {
         tvbuff_t* attr_tvb;
         guint8 length;
 
         length = tvb_get_guint8(tvb, i) + 1; /* <length> + the length byte itself */
+        if (length > max_len) {
+          length = max_len;
+        }
         attr_tvb = tvb_new_subset(tvb, i, length, length);
-
         dissect_adv_data_attr(tree, attr_tvb, pinfo);
     }
 
@@ -808,7 +814,7 @@ dissect_adv_ind_or_nonconn_or_scan(proto_tree *tree, tvbuff_t *tvb, packet_info 
     epan_scope_mem_pool = wmem_epan_scope();
     adv_addr_le = wmem_alloc(epan_scope_mem_pool, 6);
     adv_addr_be = wmem_alloc(epan_scope_mem_pool, 6);
-    
+
     DISSECTOR_ASSERT(tvb_captured_length_remaining(tvb, offset) >= 1);
 
     tvb_memcpy(tvb, adv_addr_le, offset, 6);
@@ -819,9 +825,9 @@ dissect_adv_ind_or_nonconn_or_scan(proto_tree *tree, tvbuff_t *tvb, packet_info 
     proto_tree_add_ether(tree, hf_btle_adv_addr, tvb, offset, 6, adv_addr_be);
     data_item = proto_tree_add_item(tree, hf_btle_adv_data, tvb, offset + 6, datalen, ENC_NA);
     data_tree = proto_item_add_subtree(data_item, ett_adv_data);
-    
+
     data_tvb = tvb_new_subset(tvb, offset + 6, datalen, datalen);
-    
+
     dissect_adv_data(data_tree, data_tvb, pinfo);
 }
 
@@ -833,7 +839,7 @@ dissect_adv_direct_ind(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo, int 
     wmem_allocator_t* epan_scope_mem_pool;
 
     DISSECTOR_ASSERT(tvb_captured_length_remaining(tvb, offset) >= 1);
-    
+
     epan_scope_mem_pool = wmem_epan_scope();
     adv_addr_le = wmem_alloc(epan_scope_mem_pool, 6);
     adv_addr_be = wmem_alloc(epan_scope_mem_pool, 6);
@@ -860,7 +866,7 @@ dissect_scan_req(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo, int offset
     wmem_allocator_t* epan_scope_mem_pool;
 
     DISSECTOR_ASSERT(tvb_captured_length_remaining(tvb, offset) >= 1);
-    
+
     epan_scope_mem_pool = wmem_epan_scope();
     adv_addr_le = wmem_alloc(epan_scope_mem_pool, 6);
     adv_addr_be = wmem_alloc(epan_scope_mem_pool, 6);
@@ -942,7 +948,7 @@ dissect_connect_req(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo, int off
 
     connect_item = proto_tree_add_item(tree, hf_btle_connect, tvb, offset, 22, ENC_LITTLE_ENDIAN);
     connect_tree = proto_item_add_subtree(connect_item, ett_btle_connect);
-    
+
     window_size     = (float)(tvb_get_guint8(tvb, offset+ 7)*1.25);
     window_offset     = (float)(((gint)tvb_get_guint8(tvb, offset+ 8) + (gint)(tvb_get_guint8(tvb, offset+ 9) << 8))*1.25);
     conn_interval     = (float)(((gint)tvb_get_guint8(tvb, offset+ 10) + (gint)(tvb_get_guint8(tvb, offset+ 11) << 8))*1.25);
@@ -958,7 +964,7 @@ dissect_connect_req(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo, int off
     dissect_channel_map(connect_tree, tvb, offset+16);
     proto_tree_add_bits_item(connect_tree, hf_btle_hop_interval, tvb, ((offset + 21) * 8) + 3, 5, ENC_LITTLE_ENDIAN);
     proto_tree_add_bits_item(connect_tree, hf_btle_sleep_clock_accuracy, tvb, (offset + 21) * 8, 3, ENC_LITTLE_ENDIAN);
-    
+
 }
 
 void
@@ -1162,24 +1168,17 @@ dissect_btle(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     guint8 llid;
     tvbuff_t *pld_tvb;
 
-    /*
-     * FIXME
-     * I have no idea what this does, but the L2CAP dissector segfaults
-     * without it.
-     */
-    guint16 fake_acl_data;
-
     /* sanity check: length */
     if (tvb_captured_length(tvb) > 0 && tvb_captured_length(tvb) < 9)
     {
         /* bad length: too short */
         //expert_add_info(pinfo, NULL, &ei_btle_packet_too_short);
     }
-    
+
     /* make entries in protocol column and info column on summary display */
     if (check_col(pinfo->cinfo, COL_PROTOCOL))
         col_set_str(pinfo->cinfo, COL_PROTOCOL, "Bluetooth LE");
-    
+
 
     aa = tvb_get_letohl(tvb, 0);
 
@@ -1187,12 +1186,12 @@ dissect_btle(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     if (aa == ADV_AA) {
         type = tvb_get_guint8(tvb, 4) & 0xf;
         length = tvb_get_guint8(tvb, 5) & 0x3f;
-        
+
         if ((guint)(length + 9) < tvb_captured_length(tvb))
         {
             /* not supported before 1.11.0 */
-            //expert_add_info(pinfo, NULL, &ei_btle_packet_too_long);    
-        } 
+            //expert_add_info(pinfo, NULL, &ei_btle_packet_too_long);
+        }
         else if ((guint)(length + 9) > tvb_captured_length(tvb))
         {
             /* not supported before 1.11.0 */
@@ -1276,21 +1275,21 @@ dissect_btle(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     else {
         if (check_col(pinfo->cinfo, COL_PROTOCOL))
             col_set_str(pinfo->cinfo, COL_PROTOCOL, "BLE Data");
-        
-        
+
+
         length = tvb_get_guint8(tvb, 5) & 0x3f;
-        
+
         if ((guint)(length + 9) < tvb_captured_length(tvb))
         {
             /* not supported before 1.11.0 */
-            //expert_add_info(pinfo, NULL, &ei_btle_packet_too_long);    
-        } 
+            //expert_add_info(pinfo, NULL, &ei_btle_packet_too_long);
+        }
         else if ((guint)(length + 9) > tvb_captured_length(tvb))
         {
             /* not supported before 1.11.0 */
             //expert_add_info(pinfo, NULL, &ei_btle_packet_too_short);
         }
-        
+
         if (tree) {
             col_set_str(pinfo->cinfo, COL_INFO, "Data");
 
@@ -1320,8 +1319,8 @@ dissect_btle(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
             if ((guint)(length + 9) < tvb_captured_length(tvb))
             {
                 /* not supported before 1.11.0 */
-                //expert_add_info(pinfo, length_item, &ei_btle_packet_too_long);    
-            } 
+                //expert_add_info(pinfo, length_item, &ei_btle_packet_too_long);
+            }
             else if ((guint)(length + 9) > tvb_captured_length(tvb))
             {
                 /* not supported before 1.11.0 */
@@ -1337,7 +1336,6 @@ dissect_btle(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
             // L2CAP
             else if (llid == 0x1 || llid == 0x2) {
                 if (length > 0 && btl2cap_handle) {
-                    //pinfo->private_data = &fake_acl_data;
                     pld_tvb = tvb_new_subset(tvb, offset, length, length);
                     // call_dissector(btl2cap_handle, pld_tvb, pinfo, btle_tree);
                     call_dissector(btl2cap_handle, pld_tvb, pinfo, tree);
