@@ -450,11 +450,13 @@ dissect_flags(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     {
         SET_ADDRESS(&pinfo->src, AT_STRINGZ, 7, "Master");
         SET_ADDRESS(&pinfo->dst, AT_STRINGZ, 6, "Slave");
+        pinfo->p2p_dir = P2P_DIR_SENT;
     }
     else
     {
         SET_ADDRESS(&pinfo->src, AT_STRINGZ, 6, "Slave");
         SET_ADDRESS(&pinfo->dst, AT_STRINGZ, 7, "Master");
+        pinfo->p2p_dir = P2P_DIR_RECV;
     }
 
 
