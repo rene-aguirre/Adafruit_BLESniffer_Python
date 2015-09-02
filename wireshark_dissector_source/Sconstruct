@@ -66,7 +66,8 @@ if os.name == 'posix':
     sys.exit()
   env.AppendUnique(
     CPPPATH = [os.getcwd(),
-               os.environ['WIRESHARK_INC']],
+               os.environ['WIRESHARK_INC'],
+               os.path.join(os.environ['WIRESHARK_INC'], './build/')],
     LIBPATH = ['/usr/lib',
                '/usr/local/lib'])
 
