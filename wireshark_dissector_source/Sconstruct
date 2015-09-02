@@ -46,7 +46,7 @@ def brew_setup ():
   subprocess.call("tar -xf %s" % (url.split("/")[-1]), shell=True)
   os.chdir(url.split("/")[-1][:-8])
   subprocess.call("PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig/:/usr/local/lib/pkgconfig/ ./configure", shell=True)
-  os.environ["WIRESHARK"] = os.getcwd()
+  os.environ["WIRESHARK_INC"] = os.getcwd()
   os.chdir(cdir)
   
 def error (msg):
@@ -60,13 +60,13 @@ if os.name == 'posix':
     if use_brew:
       brew_setup()
 
-  if not os.environ.has_key("WIRESHARK"):
-    error("You need to set the WIRESHARK environment variable to the location of your wireshark include directory.")
+  if not os.environ.has_key("WIRESHARK_INC"):
+    error("You need to set the WIRESHARK_INC environment variable to the location of your wireshark include directory.")
     error("(such that epan/packet.h is a valid include path)")
     sys.exit()
   env.AppendUnique(
     CPPPATH = [os.getcwd(),
-               os.environ['WIRESHARK']],
+               os.environ['WIRESHARK_INC']],
     LIBPATH = ['/usr/lib',
                '/usr/local/lib'])
 
