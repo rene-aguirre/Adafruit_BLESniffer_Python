@@ -821,7 +821,7 @@ void proto_reg_handoff_nordic_ble(void)
          */
         nordic_ble_handle     = create_dissector_handle(dissect_nordic_ble,
                 proto_nordic_ble);
-        btle_dissector_handle = find_dissector("nbtle");
+        btle_dissector_handle = find_dissector("btle");
         debug_handle          = find_dissector("nordic_debug");
         initialized           = TRUE;
     }
